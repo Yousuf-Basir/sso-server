@@ -41,9 +41,22 @@ cd sso-server
 npm install
 ```
 
-3. Create a `.env` file in the root directory with the following variables:
+3. Set up HTTPS for local development:
+```bash
+# Install mkcert (macOS)
+brew install mkcert
+
+# Install mkcert's root certificate (requires sudo)
+sudo mkcert -install
+
+# Generate certificates for localhost
+mkdir -p certificates
+mkcert -key-file ./certificates/key.pem -cert-file ./certificates/cert.pem localhost 127.0.0.1 ::1
+```
+
+4. Create a `.env` file in the root directory with the following variables:
 ```env
-NEXT_PUBLIC_BASE_URL=http://localhost:3000
+NEXT_PUBLIC_APP_URL=http://localhost:3000
 JWT_SECRET_KEY=your-secret-key
 MONGODB_URI=mongodb://localhost:27017/sso-server
 
@@ -52,7 +65,7 @@ GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 ```
 
-4. Configure client applications in `clients.json`:
+5. Configure client applications in `clients.json`:
 ```json
 {
   "clients": [
@@ -67,7 +80,7 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 }
 ```
 
-5. Start the development server:
+6. Start the development server:
 ```bash
 npm run dev
 ```
