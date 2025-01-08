@@ -1,38 +1,40 @@
-import { SignJWT, jwtVerify } from 'jose';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-
-const secretKey = process.env.JWT_SECRET_KEY || 'your-secret-key';
-const key = new TextEncoder().encode(secretKey);
+import { signToken, verifyToken } from './jwt';
 
 export async function encrypt(payload: any) {
-  return await new SignJWT(payload)
-    .setProtectedHeader({ alg: 'HS256' })
-    .setIssuedAt()
-    .setExpirationTime('24h')
-    .sign(key);
+  return await signToken(payload);
 }
 
-export async function decrypt(token: string): Promise<any> {
-  try {
-    const { payload } = await jwtVerify(token, key);
-    return payload;
-  } catch (err) {
-    return null;
-  }
+export async function decrypt(token: string) {
+  return await verifyToken(token);
 }
 
 export async function login(token: string) {
-  (await cookies()).set('token', token, {
+  const cookieStore = await cookies();
+  const payload = await decrypt(token);
+  
+  cookieStore.set('token', token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
   });
+
+  if (payload && payload.userId) {
+    cookieStore.set('userId', payload.userId as string, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
+  }
 }
 
 export async function logout() {
-  (await cookies()).delete('token');
+  const cookieStore = await cookies();
+  cookieStore.delete('token');
+  cookieStore.delete('userId');
 }
 
 export async function getSession() {

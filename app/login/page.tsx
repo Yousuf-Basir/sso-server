@@ -9,14 +9,19 @@ import { encrypt } from '@/lib/auth';
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: { error?: string };
+  searchParams: { error?: string; return_url?: string };
 }) {
   const session = await getSession();
   if (session) {
+    const returnUrl = (await searchParams).return_url;
+    if (returnUrl) {
+      redirect(decodeURIComponent(returnUrl));
+    }
     redirect('/profile');
   }
 
   const error = (await searchParams).error;
+  const returnUrl = (await searchParams).return_url;
 
   async function handleLogin(formData: FormData) {
     'use server';
@@ -44,10 +49,14 @@ export default async function LoginPage({
       });
 
       await login(token);
-      redirect('/profile');
     } catch (error) {
       console.error('Login error:', error);
       redirect('/login?error=Something went wrong');
+    } finally {
+      if (returnUrl) {
+        redirect(decodeURIComponent(returnUrl));
+      }
+      redirect('/profile');
     }
   }
 

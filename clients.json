@@ -1,0 +1,18 @@
+{
+  "clients": [
+    {
+      "clientId": "client1",
+      "clientSecret": "secret1",
+      "name": "marketplace",
+      "redirectUrls": ["http://localhost:8080/auth/callback"],
+      "allowedOrigins": ["http://localhost:8080"]
+    },
+    {
+      "clientId": "client2", 
+      "clientSecret": "secret2",
+      "name": "Test Application 2",
+      "redirectUrls": ["http://localhost:3002/auth/callback"],
+      "allowedOrigins": ["http://localhost:3002"]
+    }
+  ]
+}
