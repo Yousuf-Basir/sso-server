@@ -19,7 +19,7 @@ export default async function Home() {
           {session ? (
             <>
               <p className="text-center text-gray-600">
-                Welcome back, {session.name}!
+                Welcome back, {session?.name as string || 'User'}!
               </p>
               <a
                 href="/profile"

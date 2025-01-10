@@ -14,32 +14,84 @@ export async function login(token: string) {
   const cookieStore = await cookies();
   const payload = await decrypt(token);
   
-  cookieStore.set('token', token, {
+  if (!payload || !payload.userId) {
+    throw new Error('Invalid token payload');
+  }
+
+  // Generate access token
+  const accessToken = await encrypt({
+    userId: payload.userId,
+    isAccessToken: true
+  });
+
+  // Generate refresh token
+  const refreshToken = await encrypt({
+    userId: payload.userId,
+    isRefreshToken: true
+  });
+
+  // Set access token
+  cookieStore.set('token', accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
-    expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    expires: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
   });
 
-  if (payload && payload.userId) {
-    cookieStore.set('userId', payload.userId as string, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
-    });
-  }
+  // Set refresh token
+  cookieStore.set('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+  });
+
+  cookieStore.set('userId', payload.userId as string, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
 }
 
 export async function logout() {
   const cookieStore = await cookies();
   cookieStore.delete('token');
+  cookieStore.delete('refreshToken');
   cookieStore.delete('userId');
 }
 
 export async function getSession() {
-  const token = (await cookies()).get('token')?.value;
-  if (!token) return null;
+  const cookieStore = await cookies();
+  const token = cookieStore.get('token')?.value;
+  
+  if (!token) {
+    const refreshToken = cookieStore.get('refreshToken')?.value;
+    if (!refreshToken) return null;
+    
+    // Verify refresh token
+    const refreshPayload = await decrypt(refreshToken);
+    if (!refreshPayload || !refreshPayload.userId || !refreshPayload.isRefreshToken) {
+      return null;
+    }
+
+    // Generate new access token
+    const newAccessToken = await encrypt({
+      userId: refreshPayload.userId,
+      isAccessToken: true
+    });
+
+    // Set new access token
+    cookieStore.set('token', newAccessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      expires: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+    });
+
+    return refreshPayload;
+  }
+
   return await decrypt(token);
 }
 

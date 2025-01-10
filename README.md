@@ -92,34 +92,67 @@ npm run dev
 window.location.href = 'http://localhost:3000/sso/login?client_id=your_client_id&redirect_url=your_callback_url'
 ```
 
-2. Handle the callback and token:
+2. Handle the callback and tokens:
 ```javascript
 // In your callback route
 const token = new URLSearchParams(window.location.search).get('token');
 if (token) {
   // Store the token and authenticate the user
+  // The refresh token is automatically set as an HTTP-only cookie
 }
 ```
 
-3. Use the API endpoints:
+3. Use the API endpoints with automatic token refresh:
 ```javascript
-// Get user profile
-const response = await fetch('http://localhost:3000/api/user', {
-  headers: {
-    'Authorization': `Bearer ${token}`,
-    'X-Client-Id': 'your_client_id'
-  }
-});
+async function fetchWithTokenRefresh(url, options = {}) {
+  // First attempt with current access token
+  let response = await fetch(url, {
+    ...options,
+    credentials: 'include', // Important: needed for cookies
+    headers: {
+      ...options.headers,
+      'Authorization': `Bearer ${getCurrentToken()}`,
+      'X-Client-Id': 'your_client_id'
+    }
+  });
 
-// Validate token
-const response = await fetch('http://localhost:3000/api/validate-token', {
-  method: 'POST',
-  headers: {
-    'X-Client-Id': 'your_client_id',
-    'Content-Type': 'application/json'
-  },
-  body: JSON.stringify({ token })
-});
+  // If unauthorized, try to refresh the token
+  if (response.status === 401) {
+    const refreshResponse = await fetch('http://localhost:3000/api/auth/refresh', {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        'X-Client-Id': 'your_client_id'
+      }
+    });
+
+    if (refreshResponse.ok) {
+      const { accessToken } = await refreshResponse.json();
+      // Store the new access token
+      setCurrentToken(accessToken);
+      
+      // Retry the original request with new token
+      response = await fetch(url, {
+        ...options,
+        credentials: 'include',
+        headers: {
+          ...options.headers,
+          'Authorization': `Bearer ${accessToken}`,
+          'X-Client-Id': 'your_client_id'
+        }
+      });
+    } else {
+      // Refresh failed - redirect to login
+      window.location.href = 'http://localhost:3000/sso/login?client_id=your_client_id&redirect_url=your_callback_url';
+    }
+  }
+
+  return response;
+}
+
+// Example usage
+const response = await fetchWithTokenRefresh('http://localhost:3000/api/user');
+const userData = await response.json();
 ```
 
 ## API Documentation
@@ -152,19 +185,30 @@ Update user profile
   - email?: string
   - password?: string
 
+### POST /api/auth/refresh
+Refresh an expired access token
+- Headers:
+  - X-Client-Id: Client application ID
+- Cookies:
+  - refreshToken: HTTP-only refresh token cookie
+- Returns:
+  - accessToken: New access token
+
 ## Security Considerations
 
 - All pages are server-side rendered for enhanced security
-- JWT tokens are signed with a secure key
+- Access tokens expire after 15 minutes
+- Refresh tokens expire after 7 days
+- Tokens are signed with a secure key
 - CORS is configured to only allow registered client origins
 - Sensitive routes are protected with authentication
 - Passwords are hashed before storage
-- HTTP-only cookies are used for session management
+- HTTP-only cookies are used for refresh tokens and session management
 
 ## TODO
 
+- [x] Implement refresh token mechanism
 - [ ] Add rate limiting for API endpoints
-- [ ] Implement refresh token mechanism
 - [ ] Add more social login providers
 - [ ] Add admin dashboard for client management
 - [ ] Implement token revocation
