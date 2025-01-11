@@ -13,20 +13,21 @@ export async function decrypt(token: string) {
 export async function login(token: string) {
   const cookieStore = await cookies();
   const payload = await decrypt(token);
+  console.log(payload);
   
-  if (!payload || !payload.userId) {
+  if (!payload || !payload.id) {
     throw new Error('Invalid token payload');
   }
 
   // Generate access token
   const accessToken = await encrypt({
-    userId: payload.userId,
+    id: payload.id,
     isAccessToken: true
   });
 
   // Generate refresh token
   const refreshToken = await encrypt({
-    userId: payload.userId,
+    id: payload.id,
     isRefreshToken: true
   });
 
@@ -46,7 +47,7 @@ export async function login(token: string) {
     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
   });
 
-  cookieStore.set('userId', payload.userId as string, {
+  cookieStore.set('id', payload.id as string, {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
@@ -58,7 +59,7 @@ export async function logout() {
   const cookieStore = await cookies();
   cookieStore.delete('token');
   cookieStore.delete('refreshToken');
-  cookieStore.delete('userId');
+  cookieStore.delete('id');
 }
 
 export async function getSession() {
@@ -71,13 +72,13 @@ export async function getSession() {
     
     // Verify refresh token
     const refreshPayload = await decrypt(refreshToken);
-    if (!refreshPayload || !refreshPayload.userId || !refreshPayload.isRefreshToken) {
+    if (!refreshPayload || !refreshPayload.id || !refreshPayload.isRefreshToken) {
       return null;
     }
 
     // Generate new access token
     const newAccessToken = await encrypt({
-      userId: refreshPayload.userId,
+      id: refreshPayload.id,
       isAccessToken: true
     });
 

@@ -47,9 +47,9 @@ export const getClient = (clientId: string): Client | null => {
 };
 
 // Generate SSO token
-export const generateToken = async (userId: string, clientId: string): Promise<string> => {
+export const generateToken = async (id: string, clientId: string): Promise<string> => {
   return await signToken({ 
-    userId,
+    id,
     clientId,
     iat: Math.floor(Date.now() / 1000),
   });
@@ -58,5 +58,5 @@ export const generateToken = async (userId: string, clientId: string): Promise<s
 // Check if user is already authenticated
 export const isAuthenticated = async (): Promise<string | null> => {
   const cookieStore = cookies();
-  return (await cookieStore).get('userId')?.value || null;
+  return (await cookieStore).get('id')?.value || null;
 };

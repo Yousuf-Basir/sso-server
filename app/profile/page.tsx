@@ -61,7 +61,7 @@ export default async function ProfilePage({
 
         <div className="mb-6">
           <img
-            src={user.profileImage || '/default-avatar.png'}
+            src={user.profileImage || `https://ui-avatars.com/api/?background=random&name=${user.name}`}
             alt={user.name}
             className="w-32 h-32 rounded-full mx-auto"
           />

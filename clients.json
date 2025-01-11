@@ -10,9 +10,9 @@
     {
       "clientId": "client2", 
       "clientSecret": "secret2",
-      "name": "Test Application 2",
-      "redirectUrls": ["http://localhost:3002/auth/callback"],
-      "allowedOrigins": ["http://localhost:3002"]
+      "name": "Reel recruites",
+      "redirectUrls": ["http://localhost:3123/auth/callback"],
+      "allowedOrigins": ["http://localhost:3123"]
     }
   ]
 }
